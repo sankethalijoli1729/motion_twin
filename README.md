@@ -1,6 +1,13 @@
 # MotionTwin — Real-Time Inertial Human Motion Digital Twin
 
-**MotionTwin** is a hackathon-grade real-time human motion tracking, 3D digital twin visualization, and historical analytics platform. Built with high-frequency inertial sensor fusion, it interfaces three physical IMUs (Chest, Lower Torso, Pelvis) connected via an ESP32 gateway, articulates a continuous 3D biomechanical mannequin in real time, and persists telemetry in a structured database for historical replay and analytics.
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react)](https://react.dev)
+[![Three.js](https://img.shields.io/badge/Three.js-R3F-black?style=flat&logo=threedotjs)](https://threejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat&logo=typescript)](https://www.typescriptlang.org)
+[![ESP32](https://img.shields.io/badge/Hardware-ESP32%20%7C%20MPU6050-E7352C?style=flat&logo=espressif)](https://www.espressif.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
+> **MotionTwin** is a high-performance, real-time biomechanical digital twin and kinematics analytics platform. It fuses multi-node inertial measurement unit (IMU) data via an ESP32 gateway, drives an interactive 3D human mannequin at up to 50 Hz with quaternion-based kinematics and Slerp interpolation, and logs telemetry for synchronous historical replay and biomechanical diagnostics.
 
 ---
 

@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "motiontwin-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "MotionTwin — Real-Time Inertial Human Motion Digital Twin and Kinematics Analytics Web Application",
   "type": "module",
   "scripts": {
     "dev": "vite",

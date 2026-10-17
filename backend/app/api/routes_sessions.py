@@ -15,7 +15,7 @@ from app.services.session_manager import session_manager
 
 router = APIRouter()
 
-@router.get("/sessions", response_model=List[SessionOut])
+@router.get("/sessions", response_model=List[SessionOut], summary="List recording sessions", description="Retrieve paginated list of recorded motion sessions, with optional filters for activity and data source.")
 def list_sessions(
     skip: int = 0,
     limit: int = 50,
@@ -23,6 +23,7 @@ def list_sessions(
     data_source: Optional[str] = None,
     db: DBSession = Depends(get_db)
 ):
+    """Retrieve paginated list of recorded motion sessions."""
     query = db.query(Session)
     if activity:
         query = query.filter(Session.activity_label == activity)
@@ -30,28 +31,31 @@ def list_sessions(
         query = query.filter(Session.data_source == data_source)
     return query.order_by(Session.started_at.desc()).offset(skip).limit(limit).all()
 
-@router.post("/sessions", response_model=SessionOut)
+@router.post("/sessions", response_model=SessionOut, summary="Start recording session", description="Initiate a new real-time inertial motion recording session with high-frequency telemetry logging.")
 async def start_recording_session(session_in: SessionCreate, db: DBSession = Depends(get_db)):
-    # Start session in manager (handles buffer & DB transaction)
+    """Start a new recording session and initialize buffer."""
     session = await session_manager.start_session(session_in, db)
     return session
 
-@router.post("/sessions/pause")
+@router.post("/sessions/pause", summary="Pause active recording", description="Temporarily suspend telemetry database writes without terminating the active session or WebSocket feed.")
 async def pause_session():
+    """Pause sample writing for current active recording session."""
     success = await session_manager.pause_session()
     if not success:
         raise HTTPException(status_code=400, detail="No active recording to pause or already paused.")
     return {"status": "paused", "active_session_id": session_manager.active_session_id}
 
-@router.post("/sessions/resume")
+@router.post("/sessions/resume", summary="Resume active recording", description="Resume telemetry database writing for the currently paused recording session.")
 async def resume_session():
+    """Resume sample writing for current paused recording session."""
     success = await session_manager.resume_session()
     if not success:
         raise HTTPException(status_code=400, detail="Recording is not paused or no active session.")
     return {"status": "resumed", "active_session_id": session_manager.active_session_id}
 
-@router.get("/sessions/active")
+@router.get("/sessions/active", summary="Get active session status", description="Check current recording status, active session ID, buffer stats, and state.")
 def get_active_session(db: DBSession = Depends(get_db)):
+    """Check if a session is currently actively recording."""
     status = session_manager.get_status()
     if not status["active_session_id"]:
         return {"active": False, "status": status}
@@ -62,8 +66,9 @@ def get_active_session(db: DBSession = Depends(get_db)):
         "status": status
     }
 
-@router.get("/sessions/{session_id}", response_model=SessionDetailOut)
+@router.get("/sessions/{session_id}", response_model=SessionDetailOut, summary="Get session details and kinematics stats", description="Retrieve detailed metadata, duration, mean/max angular velocities, and sample metrics for a specific session.")
 def get_session_detail(session_id: int, db: DBSession = Depends(get_db)):
+    """Retrieve detailed session statistics including sample count and velocity analysis."""
     sess = db.query(Session).filter(Session.id == session_id).first()
     if not sess:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -120,8 +125,9 @@ def get_session_detail(session_id: int, db: DBSession = Depends(get_db)):
         gap_count=gap_count
     )
 
-@router.post("/sessions/{session_id}/stop", response_model=SessionOut)
+@router.post("/sessions/{session_id}/stop", response_model=SessionOut, summary="Stop recording session", description="Finalize an active session, compute total sample counts and timestamp, and commit to database.")
 async def stop_recording_session(session_id: int, db: DBSession = Depends(get_db)):
+    """Stop active recording session and finalize statistics."""
     if session_manager.active_session_id == session_id:
         sess = await session_manager.stop_session(db)
         if sess:
@@ -139,13 +145,14 @@ async def stop_recording_session(session_id: int, db: DBSession = Depends(get_db
         db.refresh(sess)
     return sess
 
-@router.get("/sessions/{session_id}/samples", response_model=List[SampleOut])
+@router.get("/sessions/{session_id}/samples", response_model=List[SampleOut], summary="Get session telemetry samples", description="Retrieve stored timestamped IMU samples for a given session with optional sensor filter and limit.")
 def get_session_samples(
     session_id: int,
     sensor: Optional[str] = None,
     limit: int = Query(default=3000, le=10000),
     db: DBSession = Depends(get_db)
 ):
+    """Retrieve timestamped telemetry samples for replay or visualization."""
     query = db.query(SensorSample).filter(SensorSample.session_id == session_id)
     if sensor:
         query = query.filter(SensorSample.sensor_name == sensor)
@@ -153,12 +160,13 @@ def get_session_samples(
     samples = query.order_by(SensorSample.sample_sequence.asc(), SensorSample.id.asc()).limit(limit).all()
     return samples
 
-@router.get("/sessions/{session_id}/export")
+@router.get("/sessions/{session_id}/export", summary="Export session telemetry data", description="Download recorded session sensor samples and orientation data as formatted CSV or JSON file.")
 def export_session_data(
     session_id: int,
     format: str = Query(default="csv", pattern="^(csv|json)$"),
     db: DBSession = Depends(get_db)
 ):
+    """Export recorded session data as CSV or JSON."""
     sess = db.query(Session).filter(Session.id == session_id).first()
     if not sess:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -224,8 +232,9 @@ def export_session_data(
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
 
-@router.delete("/sessions/{session_id}")
+@router.delete("/sessions/{session_id}", summary="Delete recording session", description="Permanently delete a recording session and its recorded telemetry samples.")
 def delete_session(session_id: int, db: DBSession = Depends(get_db)):
+    """Delete a recording session and cascade remove samples."""
     sess = db.query(Session).filter(Session.id == session_id).first()
     if not sess:
         raise HTTPException(status_code=404, detail="Session not found")
